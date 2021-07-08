@@ -1,30 +1,51 @@
-const Replace = require('./replaceFile')
+const Replace = require("./replaceFile");
+const fs = require("fs");
+const paths = require("path");
 
-let current = []
+let current = [];
 
 class Clone {
   async create(ctx) {
-    current = []
+    current = [];
     const { urls } = ctx.request.body;
-    console.log('urls',urls);
+    console.log("urls", urls);
 
     for (const url of urls) {
-      let result =  await Replace.create(url)
-      current.push({url,status:result})
+      let result = await Replace.create(url);
+      current.push({ url, status: result });
     }
 
-    console.log('全部完成了');
+    console.log("全部完成了");
     ctx.body = {
       code: 0,
-      data: '全部完成了',
+      data: "全部完成了",
     };
   }
 
-  async progress(ctx) {
-    console.log('progress');
+  async getWebsite(ctx) {
+    console.log("progress", ctx.query);
+    const { path } = ctx.query;
+
+    let components = [];
+    let dir = paths.join(path);
+    console.log('dir: ', dir);
+    const files = fs.readdirSync(dir);
+    console.log('files: ', files);
+    files.forEach(function (item, index) {
+      let stat = fs.lstatSync("./" + item);
+      if (stat.isDirectory() === true) {
+        components.push({
+          name:item,
+          path:paths.join(dir,item)
+        });
+      }
+    });
+
+    console.log(components);
+
     ctx.body = {
       code: 0,
-      data: current
+      data: components,
     };
   }
 }

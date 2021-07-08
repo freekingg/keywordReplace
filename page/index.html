@@ -19,11 +19,32 @@
       <el-card class="card">
         <el-form
           class="search-form"
+          label-position="left"
+          ref="websiteForm"
+          :model="websiteForm"
+          :rules="websiteRules"
           :inline="true"
+        >
+        <el-form-item prop="path">
+          <el-input
+            v-model="websiteForm.path"
+            placeholder="请输入网站根目录：/www/"
+            clearable
+          ></el-input>
+        </el-form-item>
+          <el-form-item>
+            <el-button @click="websiteSubmit" type="primary" :loading="loading"
+              >{{ loading ? '检测中' : '检测' }}</el-button
+            >
+          </el-form-item>
+        </el-form>
+        <el-form
+          class="search-form"
           label-position="left"
           ref="searchForm"
           :model="searchForm"
           :rules="rules"
+          :inline="true"
         >
           <el-form-item prop="kws">
             <el-input
@@ -56,12 +77,13 @@
 
         <!-- 全部数组的表格 -->
         <el-table id="out-table" :data="resultData" border style="width: 100%">
-          <el-table-column label="域名" prop="url"> </el-table-column>
-          <el-table-column prop="status" label="状态" width="180">
+          <el-table-column label="名称" prop="name" width="150"> </el-table-column>
+          <el-table-column label="路径" prop="path"> </el-table-column>
+          <!-- <el-table-column prop="status" label="状态" width="180">
             <template slot-scope="scope">
               <a>{{ scope.row.status ? '成功' : '失败' }}</a>
             </template>
-          </el-table-column>
+          </el-table-column> -->
         </el-table>
       </el-card>
     </div>
@@ -75,18 +97,57 @@
           msg: "value",
           resultData: [],
           loading: false,
+          websiteLoading:false,
           searchForm: {
             kws: "",
+          },
+          websiteForm:{
+            path:''
           },
           rules: {
             kws: [{ required: true, message: "请输入内容", trigger: "blur" }],
           },
-          log: "克隆完成后，文件位与桌面 clone-site 文件夹",
+          websiteRules: {
+            path: [{ required: true, message: "请输入内容", trigger: "blur" }],
+          },
+          log: "...",
         };
       },
       methods: {
         addResData(row) {
           this.resData.push({ link: row.link });
+        },
+        websiteSubmit() {
+          this.$refs.websiteForm.validate(async (valid) => {
+            if (valid) {
+              this.websiteLoading = true;
+
+              var oparray = [];
+              var path = this.websiteForm.path;
+             axios({
+                method: "get",
+                url: "http://localhost:3002/replace/getWebsite",
+                params: { path },
+              }).then((result) => {
+                console.log(result);
+                this.$message({
+                  message: '获取成功',
+                  type: 'success'
+                });
+                this.resultData = result.data.data
+                this.websiteLoading = false;
+              }).catch((err) => {
+                this.websiteLoading = false;
+                this.$message({
+                  message: '获取失败，请刷新重试',
+                  type: 'error'
+                });
+              });
+
+            }
+            console.log("error submit!!");
+            return false;
+          });
         },
         submit() {
           this.$refs.searchForm.validate(async (valid) => {
