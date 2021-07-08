@@ -7,7 +7,7 @@ const homedir = os.homedir();
 const desktop = path.join(homedir, "Desktop");
 const siteDir = path.join(desktop, `/clone-site`);
 
-const { existsFile } = require("../common/utils");
+const { existsFile, ascii } = require("../common/utils");
 
 const checkDir = fs.existsSync(siteDir);
 if (!checkDir) {
@@ -25,8 +25,10 @@ class replaceFile {
 
       if (!exists) {
         resolve({
-          file: indexHtml,
-          status: -1,
+          file:file.file,
+          status:false,
+          path:indexHtml,
+          code: -1,
           msg: "index.html文件不存在",
         });
         return;
@@ -44,17 +46,17 @@ class replaceFile {
 
           // 替换标题
           if (m1.indexOf("title") !== -1) {
-            return `<title>${file.content.title}</title>`
+            return `<title>${ascii(file.content.title)}</title>`
           }
 
           // 替换关键词
           if (m1.indexOf("keywords") !== -1) {
-            return `<meta name="keywords" content="${file.content.keywords}">`
+            return `<meta name="keywords" content="${ascii(file.content.keywords)}">`
           }
 
           // 替换关键词
           if (m1.indexOf("description") !== -1) {
-            return `<meta name="description" content="${file.content.keywords}">`
+            return `<meta name="description" content="${ascii(file.content.keywords)}">`
           }
 
           return m1;

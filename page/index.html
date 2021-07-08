@@ -91,7 +91,7 @@
           <el-table-column label="路径" prop="path"> </el-table-column>
           <el-table-column prop="status" label="状态" width="180">
             <template slot-scope="scope">
-              <a>{{ scope.row.status ? '成功' : '失败' }}</a>
+              <a>{{ scope.row.status ? '成功' : scope.row.msg ? scope.row.msg : '-' }}</a>
             </template>
           </el-table-column>
         </el-table>
@@ -143,18 +143,21 @@
               }).then((result) => {
                 console.log(result);
                 if(result.data.code === 0){
-                    this.$message({
-                    message: '获取成功',
-                    type: 'success'
-                  });
+                    
                   this.resultData = result.data.data
                   if(!this.resultData.length){
-                this.$message({
-                    message: '当前目录下没有文件，请检查 后重试',
-                    type: 'error'
-                  });
-                  return
-                }
+                    this.$message({
+                        message: '当前目录下没有文件，请检查 后重试',
+                        type: 'error'
+                      });
+                      return
+                    }
+
+                    this.$message({
+                      message: '获取成功',
+                      type: 'success'
+                    });
+
 
                 }else{
                   this.$message({
