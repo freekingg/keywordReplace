@@ -46,12 +46,21 @@
           :rules="rules"
           :inline="true"
         >
+          <el-form-item prop="titles">
+            <el-input
+              v-model="searchForm.titles"
+              :autosize="{ minRows: 10, maxRows: 14 }"
+              type="textarea"
+              placeholder="请输入标题,一行一个"
+              clearable
+            ></el-input>
+          </el-form-item>
           <el-form-item prop="kws">
             <el-input
               v-model="searchForm.kws"
-              :autosize="{ minRows: 4, maxRows: 7 }"
+              :autosize="{ minRows: 10, maxRows: 14 }"
               type="textarea"
-              placeholder="请输入网址,多网址换行，一行一个"
+              placeholder="请输入关键词,一行一个"
               clearable
             ></el-input>
           </el-form-item>
@@ -77,13 +86,14 @@
 
         <!-- 全部数组的表格 -->
         <el-table id="out-table" :data="resultData" border style="width: 100%">
-          <el-table-column label="名称" prop="name" width="150"> </el-table-column>
+          <el-table-column type="index" width="50"> </el-table-column>
+          <el-table-column label="名称" prop="file.name" width="200"> </el-table-column>
           <el-table-column label="路径" prop="path"> </el-table-column>
-          <!-- <el-table-column prop="status" label="状态" width="180">
+          <el-table-column prop="status" label="状态" width="180">
             <template slot-scope="scope">
               <a>{{ scope.row.status ? '成功' : '失败' }}</a>
             </template>
-          </el-table-column> -->
+          </el-table-column>
         </el-table>
       </el-card>
     </div>
@@ -100,12 +110,14 @@
           websiteLoading:false,
           searchForm: {
             kws: "",
+            titles:""
           },
           websiteForm:{
             path:''
           },
           rules: {
             kws: [{ required: true, message: "请输入内容", trigger: "blur" }],
+            titles: [{ required: true, message: "请输入内容", trigger: "blur" }],
           },
           websiteRules: {
             path: [{ required: true, message: "请输入内容", trigger: "blur" }],
@@ -130,11 +142,27 @@
                 params: { path },
               }).then((result) => {
                 console.log(result);
+                if(result.data.code === 0){
+                    this.$message({
+                    message: '获取成功',
+                    type: 'success'
+                  });
+                  this.resultData = result.data.data
+                  if(!this.resultData.length){
                 this.$message({
-                  message: '获取成功',
-                  type: 'success'
+                    message: '当前目录下没有文件，请检查 后重试',
+                    type: 'error'
+                  });
+                  return
+                }
+
+                }else{
+                  this.$message({
+                  message: '获取失败，请检查路径',
+                  type: 'error'
                 });
-                this.resultData = result.data.data
+                }
+                
                 this.websiteLoading = false;
               }).catch((err) => {
                 this.websiteLoading = false;
@@ -152,24 +180,41 @@
         submit() {
           this.$refs.searchForm.validate(async (valid) => {
             if (valid) {
-              this.resultData = [];
+
+              if(!this.resultData.length){
+                this.$message({
+                  message: '当前目录下没有文件，请检查 后重试',
+                  type: 'error'
+                });
+                return
+              }
+
               this.loading = true;
+              let titles = this.parseLine(this.searchForm.titles)
+              let keywords = this.parseLine(this.searchForm.kws)
 
-              var oparray = [];
-              var res = this.searchForm.kws;
-              res = res.replace(/^\n*/, "");
-              res = res.replace(/\n{2,}/g, "\n");
-              res = res.replace(/\n*$/, "");
-              oparray = res.split("\n");
+              let contents = this.resultData.map((item,index)=>{
+                return {
+                  title:titles[index],
+                  keywords:keywords[index],
+                }
+              })
 
-              const urls = oparray;
-              this.urlCount = urls.length;
-              console.log("urls", urls);
+              if(this.resultData.length > titles.length || this.resultData.length > keywords.length){
+                this.$message({
+                  message: '内容或者关键词条数不能小于网站数量',
+                  type: 'error'
+                });
+                this.loading = false;
+                return
+              }
+
+              const path = this.websiteForm.path;
 
              axios({
                 method: "post",
                 url: "http://localhost:3002/replace/",
-                data: { urls },
+                data: { path , contents },
               }).then((result) => {
                 console.log(result);
                 this.$message({
@@ -203,8 +248,17 @@
         getProgress(){
           return axios({
                 method: "get",
-                url: "http://localhost:3001/clone/progress/",
+                url: "http://localhost:3002/replace/progress/",
               })
+        },
+        parseLine(data){
+          var oparray = [];
+          var kws = data
+          kws = kws.replace(/^\n*/, "");
+          kws = kws.replace(/\n{2,}/g, "\n");
+          kws = kws.replace(/\n*$/, "");
+          oparray = kws.split("\n");
+          return oparray
         },
         // 导出表格
         exportExcel(id,name) {

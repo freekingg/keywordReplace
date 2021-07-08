@@ -1,18 +1,38 @@
 const Replace = require("./replaceFile");
 const fs = require("fs");
 const paths = require("path");
+const { getDir } = require("../common/utils");
 
 let current = [];
 
 class Clone {
   async create(ctx) {
     current = [];
-    const { urls } = ctx.request.body;
-    console.log("urls", urls);
+    const { contents, path } = ctx.request.body;
+    console.log("contents", contents);
 
-    for (const url of urls) {
-      let result = await Replace.create(url);
-      current.push({ url, status: result });
+    // 获取目录下的文件夹
+    let files = [];
+    try {
+      files = await getDir(path);
+    } catch (error) {
+      ctx.body = {
+        code: -1,
+        data: [],
+      };
+    }
+
+    let formatFile = files.map((item,index)=>{
+      return {
+        file:item,
+        content:contents[index]
+      }
+    })
+
+    for (const file of formatFile) {
+      let result = await Replace.create(file);
+      console.log('result',result);
+      current.push(result);
     }
 
     console.log("全部完成了");
@@ -23,29 +43,28 @@ class Clone {
   }
 
   async getWebsite(ctx) {
-    console.log("progress", ctx.query);
     const { path } = ctx.query;
-
-    let components = [];
-    let dir = paths.join(path);
-    console.log('dir: ', dir);
-    const files = fs.readdirSync(dir);
-    console.log('files: ', files);
-    files.forEach(function (item, index) {
-      let stat = fs.lstatSync("./" + item);
-      if (stat.isDirectory() === true) {
-        components.push({
-          name:item,
-          path:paths.join(dir,item)
-        });
-      }
-    });
-
-    console.log(components);
+    let files = [];
+    try {
+      files = await getDir(path);
+    } catch (error) {
+      ctx.body = {
+        code: -1,
+        data: [],
+      };
+    }
 
     ctx.body = {
       code: 0,
-      data: components,
+      data: files,
+    };
+  }
+
+  async progress(ctx) {
+    console.log('progress');
+    ctx.body = {
+      code: 0,
+      data: current
     };
   }
 }

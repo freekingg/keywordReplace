@@ -1,4 +1,6 @@
 const request = require('request')
+const paths = require("path");
+const fs = require("fs");
 
 // 查询条件，去除没有值的key
 function Invalid(params = {}) {
@@ -48,4 +50,50 @@ let checkProxy = function(proxy, headers) {
     })
   }
 
-module.exports = { Invalid, Paging,checkProxy }
+  let getDir = function(path) {
+    return new Promise((resolve, reject) => {
+      let components = [];
+      let dir = paths.join(path);
+      let files = []
+      try {
+        files = fs.readdirSync(dir);
+      } catch (error) {
+        reject()
+        return
+      }
+      files.forEach(function (item, index) {
+        let stat = fs.lstatSync(paths.join(dir , item));
+        if (stat.isDirectory() === true) {
+          components.push({
+            name:item,
+            path:paths.join(dir,item)
+          });
+        }
+      });
+      resolve(components)
+    })
+  }
+
+  let existsFile = function(path){
+    return new Promise((resolve, reject) => {
+      try {
+        fs.accessSync(path, fs.constants.R_OK | fs.constants.W_OK);
+        resolve(true)
+      } catch (err) {
+        console.error('no access!');
+        resolve(false)
+      }
+    })
+  }
+
+  let parseLine = function(data){
+    var oparray = [];
+    var kws = data
+    kws = kws.replace(/^\n*/, "");
+    kws = kws.replace(/\n{2,}/g, "\n");
+    kws = kws.replace(/\n*$/, "");
+    oparray = kws.split("\n");
+    return oparray
+  }
+
+module.exports = { Invalid, Paging,checkProxy,getDir,existsFile,parseLine }

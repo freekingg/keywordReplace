@@ -1,4 +1,3 @@
-
 const fs = require("fs");
 const path = require("path");
 const replace = require("replace-in-file");
@@ -8,6 +7,8 @@ const homedir = os.homedir();
 const desktop = path.join(homedir, "Desktop");
 const siteDir = path.join(desktop, `/clone-site`);
 
+const { existsFile } = require("../common/utils");
+
 const checkDir = fs.existsSync(siteDir);
 if (!checkDir) {
   fs.mkdir(siteDir, (e) => {
@@ -16,84 +17,70 @@ if (!checkDir) {
 }
 
 class replaceFile {
-  async create(url) {
-    return new Promise((resolve, reject) => {
-      // 取第一个域名为文件夹名字
-      const { host } = new URL(url);
-      const name = host;
+  async create(file) {
+    console.log('file',file);
+    return new Promise(async (resolve, reject) => {
+      let indexHtml = path.join(file.file.path, "index.html");
+      let exists = await existsFile(indexHtml);
 
-      console.log(new URL(url));
-
-      // 创建网站文件夹
-      const webSiteDir = path.join(siteDir, name);
-      console.log("webSiteDir: ", webSiteDir);
-
-      if (fs.existsSync(webSiteDir)) {
-        delFile(webSiteDir);
-        console.log("存在目标文件夹，先删除");
+      if (!exists) {
+        resolve({
+          file: indexHtml,
+          status: -1,
+          msg: "index.html文件不存在",
+        });
+        return;
       }
 
-       const src = path.join(webSiteDir, "index.html");
-          console.log("克隆完成", src);
+      const options = {
+        files: indexHtml,
+        from: [
+          /<title>[\s\S]*?<\/title>/gi,
+          /<.*?["']?keywords["']?.*?\/?>/gi,
+          /<.*?["']?description["']?.*?\/?>/gi,
+        ],
+        to: (m1) => {
+          if (!m1) return;
 
-          const options = {
-            files: src,
-            from: [
-              /<a([\s]+|[\s]+[^<>]+[\s]+)href=(\"([^<>"\']*)\"|\'([^<>"\']*)\')[^<>]*>/gi,
-              /<script([\s]+|[\s]+[^<>]+[\s]+)src=(\"([^<>"\']*)\"|\'([^<>"\']*)\')[^<>]*>/gi,
-              /hm.src/gi,
-              /cnzz.com/gi,
-              /window.open/gi,
-            ],
-            to: (m1) => {
-              if (!m1) return;
+          // 替换标题
+          if (m1.indexOf("title") !== -1) {
+            return `<title>${file.content.title}</title>`
+          }
 
-              if (m1.indexOf("href") !== -1) {
-                const reg = /href="[^"]*"/gi;
-                const str = m1.replace(reg, 'href="#"');
-                return str;
-              }
+          // 替换关键词
+          if (m1.indexOf("keywords") !== -1) {
+            return `<meta name="keywords" content="${file.content.keywords}">`
+          }
 
-              if (m1.indexOf("src") !== -1) {
-                const ignoreJs = ["cnzz", "51.la", "baidu"];
+          // 替换关键词
+          if (m1.indexOf("description") !== -1) {
+            return `<meta name="description" content="${file.content.keywords}">`
+          }
 
-                const r = ignoreJs.filter((item) => m1.indexOf(item) !== -1);
-                if (r.length) {
-                  const reg = /src="[^"]*"/gi;
-                  const str = m1.replace(reg, 'src="#"');
-                  return str;
-                }
-              }
+          return m1;
+        },
+      };
 
-              if (m1.indexOf("hm.src") !== -1) {
-                return "hm";
-              }
-
-              if (m1.indexOf("cnzz.com") !== -1) {
-                return "";
-              }
-
-              if (m1.indexOf("window.open") !== -1) {
-                return "";
-              }
-
-              return m1;
-            },
-          };
-
-          replace(options)
-            .then((results) => {
-              console.log("内容替换完成:", results);
-              resolve({
-                url,
-                path:results
-              });
-            })
-            .catch((error) => {
-              console.error("内容替换失败:", error);
-              // eslint-disable-next-line prefer-promise-reject-errors
-              resolve(false);
-            });
+      replace(options)
+        .then((results) => {
+          console.log("内容替换完成:");
+          resolve({
+            file:file.file,
+            status:true,
+            path:indexHtml,
+            code: 0,
+          });
+        })
+        .catch((error) => {
+          console.error("内容替换失败:", error);
+          // eslint-disable-next-line prefer-promise-reject-errors
+          resolve({
+            file:file.file,
+            status:false,
+            path:indexHtml,
+            code: -1,
+          });
+        });
     });
   }
 }
