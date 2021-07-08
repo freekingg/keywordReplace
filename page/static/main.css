@@ -1,0 +1,21 @@
+#app{
+  width: 1000px;
+  margin: 0 auto;
+}
+.exportExcel{
+  margin-bottom: 16px !important;
+}
+
+.el-table .cell{
+  word-break: normal !important;
+}
+
+#fixed-table{
+  width: 200px !important;
+  position: fixed;
+  left: 30px;
+  top: 100px;
+}
+.el-form-item__content{
+  min-width: 300px;
+}
